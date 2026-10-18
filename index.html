@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101114">
+<title>Nova AI</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{color-scheme:dark;--bg:#101114;--panel:#191a20;--line:#2a2b33;--text:#f5f5f7;--muted:#a3a4ae;--accent:#b7f36b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,sans-serif;height:100dvh;display:flex;flex-direction:column}
+header{height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);flex-shrink:0}
+.brand{font-weight:750;letter-spacing:.2px;font-size:19px}.brand span{color:var(--accent)}button{font:inherit;cursor:pointer}
+.icon{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:12px;padding:9px 11px}
+main{flex:1;overflow:auto;padding:20px 16px 14px;display:flex;flex-direction:column;gap:14px}
+.welcome{margin:auto 0;text-align:center;padding:12px 8px 22px}.orb{width:58px;height:58px;border-radius:20px;background:linear-gradient(135deg,#d3ff9b,#7eaeff);margin:0 auto 16px;box-shadow:0 0 45px #b7f36b22}
+h1{font-size:25px;margin:0 0 8px}.welcome p{color:var(--muted);margin:0 auto 22px;max-width:300px;line-height:1.5}
+.suggestions{display:grid;grid-template-columns:1fr 1fr;gap:9px;max-width:440px;margin:auto}
+.suggestion{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:12px;text-align:left;color:var(--text);font-size:14px;min-height:68px}
+.message{max-width:88%;padding:12px 14px;border-radius:17px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.user{align-self:flex-end;background:#292b33}.assistant{align-self:flex-start;background:var(--panel);border:1px solid var(--line)}
+.composer-wrap{padding:10px 12px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#101114}
+.attachrow{display:flex;gap:8px;margin:0 auto 8px;max-width:680px}.small{font-size:12px;color:var(--muted);background:none;border:0;padding:3px}
+.composer{display:flex;align-items:flex-end;gap:8px;max-width:680px;margin:auto;border:1px solid #393a43;background:var(--panel);border-radius:20px;padding:8px}
+textarea{resize:none;max-height:130px;min-height:42px;flex:1;background:transparent;border:0;outline:none;color:var(--text);font:inherit;padding:10px 5px}
+.send{border:0;border-radius:14px;background:var(--accent);color:#101114;font-weight:800;padding:11px 14px;min-width:48px}
+.notice{text-align:center;color:var(--muted);font-size:11px;margin:7px auto 0;max-width:680px}
+#file{display:none}.tag{font-size:11px;color:var(--muted);border:1px solid var(--line);padding:5px 8px;border-radius:99px}
+</style>
+</head>
+<body>
+<header><div class="brand">nova<span>✦</span> AI</div><button class="icon" id="newChat" aria-label="Nuevo chat">＋ Nuevo</button></header>
+<main id="chat">
+  <section class="welcome" id="welcome">
+    <div class="orb"></div><h1>¿Qué tienes en mente?</h1>
+    <p>Tu espacio para preguntar, explorar ideas y analizar imágenes.</p>
+    <div class="suggestions">
+      <button class="suggestion" data-prompt="Explícame un tema difícil de forma sencilla">✦ Explícame algo difícil</button>
+      <button class="suggestion" data-prompt="Dame ideas creativas y originales">✧ Ideas creativas</button>
+      <button class="suggestion" data-prompt="Ayúdame a analizar una imagen">▧ Analizar una imagen</button>
+      <button class="suggestion" data-prompt="Ayúdame a investigar un tema y dime qué fuentes consultar">⌕ Investigar un tema</button>
+    </div>
+  </section>
+</main>
+<div class="composer-wrap">
+  <div class="attachrow"><button class="small" id="attach">＋ Adjuntar imagen</button><span class="tag">Prototipo Android</span><input type="file" id="file" accept="image/*"></div>
+  <form class="composer" id="form"><textarea id="prompt" placeholder="Pregúntame lo que quieras…" rows="1"></textarea><button class="send" type="submit" aria-label="Enviar">↑</button></form>
+  <div class="notice">Nova AI · Conexión con Gemini mediante servidor seguro.</div>
+</div>
+<script>
+const chat=document.querySelector('#chat'), welcome=document.querySelector('#welcome'), promptBox=document.querySelector('#prompt'), fileInput=document.querySelector('#file');
+function addMessage(text,who){if(welcome)welcome.remove();const el=document.createElement('div');el.className='message '+who;el.textContent=text;chat.appendChild(el);chat.scrollTop=chat.scrollHeight;}
+async function send(text){const t=(text||promptBox.value).trim();if(!t)return;addMessage(t,'user');promptBox.value='';const waiting=document.createElement('div');waiting.className='message assistant';waiting.textContent='Nova está pensando…';chat.appendChild(waiting);chat.scrollTop=chat.scrollHeight;document.querySelector('.send').disabled=true;try{const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:t})});const data=await response.json().catch(()=>({}));waiting.textContent=response.ok?(data.answer||'No recibí una respuesta.'):(data.error||'Hubo un problema al conectar con Nova AI.');}catch(e){waiting.textContent='No pude conectar con el servidor. Revisa tu conexión a internet e inténtalo otra vez.';}finally{document.querySelector('.send').disabled=false;chat.scrollTop=chat.scrollHeight;}}
+document.querySelector('#form').addEventListener('submit',e=>{e.preventDefault();send();});
+document.querySelectorAll('[data-prompt]').forEach(b=>b.addEventListener('click',()=>{promptBox.value=b.dataset.prompt;promptBox.focus();}));
+document.querySelector('#attach').addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',()=>{if(fileInput.files[0]){addMessage('Imagen seleccionada: '+fileInput.files[0].name,'user');addMessage('El análisis de imágenes todavía no está conectado en esta versión. Por ahora puedes conversar por texto.','assistant');}});
+document.querySelector('#newChat').addEventListener('click',()=>{chat.innerHTML='';const section=document.createElement('section');section.className='welcome';section.innerHTML='<div class="orb"></div><h1>Nuevo chat</h1><p>¿Qué quieres explorar hoy?</p>';chat.appendChild(section);});
+if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
